@@ -49,6 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SnackBar(content: Text('Verification email sent. Please verify before logging in.')),
             );
           }
+          await _authService.signOut(); // Force logout so they have to login again to verify email
           setState(() {
             _isRegistering = false;
             _formKey.currentState?.reset();
