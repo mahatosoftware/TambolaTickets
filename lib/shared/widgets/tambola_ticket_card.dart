@@ -36,7 +36,9 @@ class TambolaTicketCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: primaryColor,
+                // Always use Deep Royal Blue for header to ensure white text contrast,
+                // unless a specific color override is provided.
+                color: colorTheme ?? const Color(0xFF1A237E),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
@@ -75,12 +77,14 @@ class TambolaTicketCard extends StatelessWidget {
                       child: Container(
                         height: 40, // Fixed height for consistency
                         alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: isEmpty
-                              ? Colors.grey[100]
-                              : (isMarked
-                                  ? primaryColor.withOpacity(0.2)
-                                  : Colors.white),
+                          decoration: BoxDecoration(
+                            color: isEmpty
+                                ? (theme.brightness == Brightness.dark 
+                                    ? Colors.grey[800] 
+                                    : Colors.grey[100])
+                                : (isMarked
+                                    ? primaryColor.withOpacity(0.2)
+                                    : theme.colorScheme.surface),
                         ),
                         child: isEmpty
                             ? null

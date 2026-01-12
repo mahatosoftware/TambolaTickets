@@ -288,7 +288,9 @@ class _PlayerTicketScreenState extends State<PlayerTicketScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Ticket #${_ticketIds[index]}', style: Theme.of(context).textTheme.titleLarge),
+                          Text('Ticket #${_ticketIds[index]}', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          )),
                           IconButton(
                             icon: const Icon(Icons.refresh),
                             onPressed: () => _resetTicket(index),

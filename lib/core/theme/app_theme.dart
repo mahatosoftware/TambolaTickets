@@ -66,6 +66,7 @@ class AppTheme {
         primary: const Color(0xFF536DFE), // Lighter royal blue for dark mode
         secondary: const Color(0xFFF06292), // Lighter maroon
         tertiary: const Color(0xFF69F0AE), // Lighter emerald
+        onPrimary: Colors.white,
         surface: const Color(0xFF1E1E1E),
         background: const Color(0xFF121212),
       ),

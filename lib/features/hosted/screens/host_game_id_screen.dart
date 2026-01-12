@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:math';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/services/firestore_service.dart';
@@ -86,23 +87,50 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
   }
 
   void _scanQrCode() async {
-    // Mock Scanning Flow
-    // In a real app, integrate mobile_scanner here
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Opening Camera... (Mock Scan)')),
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (scannerContext) {
+          bool isPopped = false;
+          return Scaffold(
+            appBar: AppBar(title: const Text('Scan Game ID')),
+            body: MobileScanner(
+              onDetect: (capture) {
+                if (isPopped) return;
+                final List<Barcode> barcodes = capture.barcodes;
+                for (final barcode in barcodes) {
+                  if (barcode.rawValue != null) {
+                     String code = barcode.rawValue!;
+                     // If it's a ticket URL (tambola://ticket/GAMEID-TicketID), extract GameID
+                     if (code.startsWith('tambola://ticket/')) {
+                        code = code.replaceAll('tambola://ticket/', '');
+                        if (code.contains('-')) {
+                           code = code.split('-')[0];
+                        }
+                     }
+                     
+                     if (code.isNotEmpty) {
+                        isPopped = true;
+                        Navigator.of(scannerContext).pop(code);
+                        break;
+                     }
+                  }
+                }
+              },
+            ),
+          );
+        },
+      ),
     );
-    
-    await Future.delayed(const Duration(seconds: 1));
-    
-    // Auto-fill a mock ID for demo
-    setState(() {
-      _gameIdController.text = "SCAN99";
-    });
-    
-    if (mounted) {
-       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Scanned Game ID: SCAN99')),
-      );
+
+    if (result != null && result is String) {
+      setState(() {
+        _gameIdController.text = result;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Scanned Game ID: $result')),
+        );
+      }
     }
   }
 

@@ -91,8 +91,11 @@ class _HostedTicketDetailScreenState extends State<HostedTicketDetailScreen> {
                   child: Row(
                     children: [
                       Chip(
-                        label: Text('Ticket #${widget.ticketId}'),
-                        backgroundColor: Colors.blue[100],
+                        label: Text(
+                          'Ticket #${widget.ticketId}',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        backgroundColor: Colors.purple,
                       ),
                       const SizedBox(width: 12),
                       Chip(
