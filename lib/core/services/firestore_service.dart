@@ -79,7 +79,7 @@ class FirestoreService {
         .doc(gameId)
         .collection('tickets')
         .orderBy('createdAt', descending: true)
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 

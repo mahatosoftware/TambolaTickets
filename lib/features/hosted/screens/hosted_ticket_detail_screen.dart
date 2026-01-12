@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../shared/widgets/tambola_ticket_card.dart';
-import '../../../core/utils/ticket_generator.dart';
 
 class HostedTicketDetailScreen extends StatefulWidget {
   final String ticketId;
@@ -66,7 +65,7 @@ class _HostedTicketDetailScreenState extends State<HostedTicketDetailScreen> {
             .doc(gameId)
             .collection('tickets')
             .doc(widget.ticketId)
-            .snapshots(),
+            .snapshots(includeMetadataChanges: true),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
              return Center(child: Text('Error: ${snapshot.error}'));
@@ -118,7 +117,7 @@ class _HostedTicketDetailScreenState extends State<HostedTicketDetailScreen> {
                     child: TambolaTicketCard(
                       ticketData: _ticketData,
                       markedNumbers: currentMarks,
-                      onNumberTap: (num) {
+                      onNumberTap: (number) {
                         // Host cannot mark numbers
                       },
                       isInteractive: false,
