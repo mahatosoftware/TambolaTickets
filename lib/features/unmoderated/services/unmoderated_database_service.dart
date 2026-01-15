@@ -1,7 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'dart:convert';
-
+import 'package:flutter/foundation.dart';
 class UnmoderatedDatabaseService {
   static final UnmoderatedDatabaseService _instance = UnmoderatedDatabaseService._internal();
   static Database? _database;
@@ -50,6 +50,16 @@ class UnmoderatedDatabaseService {
 
   Future<List<Map<String, dynamic>>> getAllUnmoderatedTickets() async {
     final db = await database;
+    final twoDaysAgo = DateTime.now().subtract(const Duration(hours: 48)).toIso8601String();
+    
+    // Cleanup old tickets
+    await db.delete(
+      'unmoderated_tickets',
+      where: 'createdAt <= ?',
+      whereArgs: [twoDaysAgo],
+    );
+    debugPrint('Deleted unmoderated tickets older than $twoDaysAgo');
+
     // Order by createdAt descending
     return await db.query('unmoderated_tickets', orderBy: 'createdAt DESC');
   }

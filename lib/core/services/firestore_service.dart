@@ -14,6 +14,7 @@ class FirestoreService {
     await _firestore.collection('games').doc(gameId).set({
       'gameId': gameId,
       'createdAt': FieldValue.serverTimestamp(),
+      'expireAt': DateTime.now().add(const Duration(hours: 48)), // TTL for auto-deletion
       'digitalCount': digitalCount,
       'manualCount': manualCount,
     }, SetOptions(merge: true));

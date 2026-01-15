@@ -164,10 +164,16 @@ class LocalDatabaseService {
     // Get time 48 hours ago
     final twoDaysAgo = DateTime.now().subtract(const Duration(hours: 48)).toIso8601String();
     
+    // DELETE games older than 48 hours
+    await db.delete(
+      'generated_game_ids',
+      where: 'createdAt <= ?',
+      whereArgs: [twoDaysAgo],
+    );
+    debugPrint('Deleted local games older than $twoDaysAgo');
+    
     return await db.query(
       'generated_game_ids',
-      where: 'createdAt > ?',
-      whereArgs: [twoDaysAgo],
       orderBy: 'createdAt DESC',
     );
   }
