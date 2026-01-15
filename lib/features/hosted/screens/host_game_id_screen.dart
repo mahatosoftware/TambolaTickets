@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+
 import 'dart:math';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../../core/services/firestore_service.dart';
 import 'host_dashboard_screen.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/services/local_database_service.dart';
 
 class HostGameIdScreen extends StatefulWidget {
   const HostGameIdScreen({super.key});
@@ -15,8 +17,10 @@ class HostGameIdScreen extends StatefulWidget {
 class _HostGameIdScreenState extends State<HostGameIdScreen> {
   final TextEditingController _gameIdController = TextEditingController();
   bool _isGenerating = false;
+  List<Map<String, dynamic>> _recentGameIds = [];
 
   final FirestoreService _firestoreService = FirestoreService();
+  final LocalDatabaseService _localDatabaseService = LocalDatabaseService();
   
   BannerAd? _bannerAd;
   bool _isAdLoaded = false;
@@ -25,6 +29,16 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
   void initState() {
     super.initState();
     _loadBannerAd();
+    _loadRecentGameIds();
+  }
+  
+  void _loadRecentGameIds() async {
+    final ids = await _localDatabaseService.getRecentGeneratedGameIds();
+    if (mounted) {
+      setState(() {
+        _recentGameIds = ids;
+      });
+    }
   }
 
   void _loadBannerAd() {
@@ -86,56 +100,15 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
     }
   }
 
-  void _scanQrCode() async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (scannerContext) {
-          bool isPopped = false;
-          return Scaffold(
-            appBar: AppBar(title: const Text('Scan Game ID')),
-            body: MobileScanner(
-              onDetect: (capture) {
-                if (isPopped) return;
-                final List<Barcode> barcodes = capture.barcodes;
-                for (final barcode in barcodes) {
-                  if (barcode.rawValue != null) {
-                     String code = barcode.rawValue!;
-                     // If it's a ticket URL (tambola://ticket/GAMEID-TicketID), extract GameID
-                     if (code.startsWith('tambola://ticket/')) {
-                        code = code.replaceAll('tambola://ticket/', '');
-                        if (code.contains('-')) {
-                           code = code.split('-')[0];
-                        }
-                     }
-                     
-                     if (code.isNotEmpty) {
-                        isPopped = true;
-                        Navigator.of(scannerContext).pop(code);
-                        break;
-                     }
-                  }
-                }
-              },
-            ),
-          );
-        },
-      ),
-    );
 
-    if (result != null && result is String) {
-      setState(() {
-        _gameIdController.text = result;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scanned Game ID: $result')),
-        );
-      }
-    }
-  }
 
-  void _proceedToSetup() {
+  void _proceedToSetup() async {
     if (_gameIdController.text.isNotEmpty) {
+      // Save ID to local history
+      await _localDatabaseService.saveGeneratedGameId(_gameIdController.text);
+      
+      if (!mounted) return;
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -144,7 +117,10 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
             gameId: _gameIdController.text,
           ),
         ),
-      );
+      ).then((_) {
+         // Refresh list when returning (in case user started a new game and came back)
+         _loadRecentGameIds();
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please generate or scan a Game ID first.')),
@@ -176,7 +152,7 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Scan a QR code from a previous session, generate a unique ID, or enter one manually.',
+                    'Generate a unique ID or pick from recent history.',
                     style: TextStyle(color: Colors.grey),
                     textAlign: TextAlign.center,
                   ),
@@ -189,38 +165,22 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
                       prefixIcon: Icon(Icons.tag),
                     ),
                     textCapitalization: TextCapitalization.characters,
-                    // readOnly: false, // Default is false, allowing manual typing
+                    readOnly: true,
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _scanQrCode,
-                          icon: const Icon(Icons.qr_code_scanner),
-                          label: const Text('SCAN QR'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.blueGrey,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _isGenerating ? null : _generateGameId,
-                          icon: _isGenerating 
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
-                            : const Icon(Icons.auto_awesome),
-                          label: const Text('GENERATE'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                        ),
-                      ),
-                    ],
+                  ElevatedButton.icon(
+                    onPressed: _isGenerating ? null : _generateGameId,
+                    icon: _isGenerating 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                      : const Icon(Icons.auto_awesome),
+                    label: const Text('GENERATE'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: _proceedToSetup,
                     style: ElevatedButton.styleFrom(
@@ -232,7 +192,44 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
                       style: TextStyle(fontSize: 18),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                   if (_recentGameIds.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Recent Game IDs',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: _recentGameIds.length,
+                          separatorBuilder: (context, index) => const Divider(),
+                          itemBuilder: (context, index) {
+                            final item = _recentGameIds[index];
+                            final date = DateTime.parse(item['createdAt']);
+                            final formattedDate = DateFormat('MMM d, h:mm a').format(date);
+                            
+                            return ListTile(
+                              leading: const Icon(Icons.history),
+                              title: Text(
+                                item['gameId'],
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(formattedDate),
+                              onTap: () {
+                                setState(() {
+                                  _gameIdController.text = item['gameId'];
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            );
+                          },
+                        ),
+                      ),
+                   ],
                 ],
               ),
             ),

@@ -24,7 +24,7 @@ class LocalDatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -46,10 +46,25 @@ class LocalDatabaseService {
         ticketData TEXT
       )
     ''');
+    
+    // Stores history of generated IDs
+    await db.execute('''
+      CREATE TABLE generated_game_ids (
+        gameId TEXT PRIMARY KEY,
+        createdAt TEXT
+      )
+    ''');
   }
   
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-     // No upgrades needed for now as we removed unmoderated logic
+     if (oldVersion < 4) {
+       await db.execute('''
+        CREATE TABLE generated_game_ids (
+          gameId TEXT PRIMARY KEY,
+          createdAt TEXT
+        )
+      ''');
+     }
   }
 
   // Ensures only one game session exists. Wipes old data if gameId changes.
@@ -130,5 +145,30 @@ class LocalDatabaseService {
 
   Future<void> setCurrentGameId(String gameId) async {
     await _ensureGameSession(gameId);
+  }
+  
+  Future<void> saveGeneratedGameId(String gameId) async {
+    final db = await database;
+    await db.insert(
+      'generated_game_ids',
+      {
+        'gameId': gameId,
+        'createdAt': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+  
+  Future<List<Map<String, dynamic>>> getRecentGeneratedGameIds() async {
+    final db = await database;
+    // Get time 48 hours ago
+    final twoDaysAgo = DateTime.now().subtract(const Duration(hours: 48)).toIso8601String();
+    
+    return await db.query(
+      'generated_game_ids',
+      where: 'createdAt > ?',
+      whereArgs: [twoDaysAgo],
+      orderBy: 'createdAt DESC',
+    );
   }
 }
