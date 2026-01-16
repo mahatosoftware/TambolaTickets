@@ -279,4 +279,32 @@ class FirestoreService {
       rethrow;
     }
   }
+
+  Stream<List<Map<String, dynamic>>> getClaimsStream(String gameId) {
+    return _firestore
+        .collection('games')
+        .doc(gameId)
+        .collection('claims')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              data['id'] = doc.id;
+              return data;
+            }).toList());
+  }
+
+  Future<void> updateClaimStatus(String gameId, String claimId, String status) async {
+    try {
+      await _firestore
+          .collection('games')
+          .doc(gameId)
+          .collection('claims')
+          .doc(claimId)
+          .update({'status': status});
+    } catch (e) {
+      debugPrint('Error updating claim status: $e');
+      rethrow;
+    }
+  }
 }

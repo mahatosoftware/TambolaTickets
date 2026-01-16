@@ -47,8 +47,8 @@ class _PlayerTicketScreenState extends State<PlayerTicketScreen> {
 
       // Pure Local Fetch Logic
       // Since PlayerJoinScreen handles pre-fetching and saving, we rely 100% on Local DB here.
-      final ticketsDocs = await LocalDatabaseService().getTickets();
-      debugPrint('Loaded ${ticketsDocs.length} tickets from Local DB');
+      final ticketsDocs = await LocalDatabaseService().getTickets(widget.gameId);
+      debugPrint('Loaded ${ticketsDocs.length} tickets from Local DB for game ${widget.gameId}');
 
       if (ticketsDocs.isEmpty) {
          setState(() {
@@ -60,8 +60,10 @@ class _PlayerTicketScreenState extends State<PlayerTicketScreen> {
 
       List<List<List<int>>> loadedTickets = [];
       List<String> loadedTicketIds = [];
+      Map<int, Set<int>> savedMarks = {}; // Temporary map to hold loaded marks
       String? name;
 
+      int index = 0;
       for (var ticketMap in ticketsDocs) {
         if (ticketMap.containsKey('grid')) {
           final gridData = ticketMap['grid'];
@@ -81,8 +83,15 @@ class _PlayerTicketScreenState extends State<PlayerTicketScreen> {
                // Use 'ticketId' from local DB or 'id' from Firestore/reconstructed map
                String tid = ticketMap['ticketId'] ?? ticketMap['id'] ?? 'Unknown';
                loadedTicketIds.add(tid);
+               
+               // Restore marked numbers
+               if (ticketMap['markedNumbers'] != null) {
+                  final List<dynamic> marks = ticketMap['markedNumbers'];
+                  savedMarks[index] = marks.map((e) => e as int).toSet();
+               }
 
                name = ticketMap['name'] as String?;
+               index++;
              }
           }
         }
@@ -93,7 +102,9 @@ class _PlayerTicketScreenState extends State<PlayerTicketScreen> {
         _ticketIds = loadedTicketIds;
         _assignedName = name;
         _isLoading = false;
-        // Initialize marked sets for each ticket if unused
+        _markedNumbersMap = savedMarks;
+        
+        // Initialize marked sets for remaining if any (though loop handles it)
         for (int i = 0; i < _tickets.length; i++) {
           if (!_markedNumbersMap.containsKey(i)) {
              _markedNumbersMap[i] = {};
@@ -120,6 +131,13 @@ class _PlayerTicketScreenState extends State<PlayerTicketScreen> {
       }
       _markedNumbersMap[ticketIndex] = set;
     });
+    
+    // Auto-save changes
+    if (_ticketIds.length > ticketIndex) {
+      final tid = _ticketIds[ticketIndex];
+      final marks = _markedNumbersMap[ticketIndex]?.toList() ?? [];
+      LocalDatabaseService().updateTicketMarkedNumbers(tid, marks);
+    }
   }
 
   void _resetTicket(int ticketIndex) {
