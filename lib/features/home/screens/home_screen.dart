@@ -4,6 +4,7 @@ import '../../unmoderated/screens/unmoderated_setup_screen.dart';
 import '../../hosted/screens/hosted_mode_selection_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/ad_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Verify if user account still exists (e.g. if deleted in console)
     AuthService().verifyUser();
+    // Load interstitial ad
+    AdService().loadInterstitialAd();
   }
 
   @override
@@ -69,11 +72,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.people_alt_rounded,
                 color: Theme.of(context).colorScheme.primary,
                 onTap: () {
-                   Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const HostedModeSelectionScreen(),
-                    ),
+                  AdService().showInterstitialAd(
+                    onAdDismissed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HostedModeSelectionScreen(),
+                        ),
+                      );
+                    },
                   );
                 },
               ),

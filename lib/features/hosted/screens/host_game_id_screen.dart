@@ -6,6 +6,7 @@ import '../../../../core/services/firestore_service.dart';
 import 'host_dashboard_screen.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/services/local_database_service.dart';
+import '../../../../core/services/ad_service.dart';
 
 class HostGameIdScreen extends StatefulWidget {
   const HostGameIdScreen({super.key});
@@ -43,7 +44,7 @@ class _HostGameIdScreenState extends State<HostGameIdScreen> {
 
   void _loadBannerAd() {
     _bannerAd = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // Test Banner ID
+      adUnitId: AdService().bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
